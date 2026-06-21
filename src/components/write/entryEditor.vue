@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { ref, watch, inject, type Ref, nextTick } from "vue"
 import { useEditor, EditorContent } from "@tiptap/vue-3"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import CodeExtension from "@tiptap/extension-code"
-import { TextBold, TextItalic, ListCheck, ListArrowDown, ChatRoundLine, Code, CodeSquare } from "@solar-icons/vue"
+import Link from "@tiptap/extension-link"
+import {
+    TextBold, TextItalic, TextCross, LinkMinimalistic,
+    ListCheck, ListArrowDown, ChatRoundLine, Code,
+    UndoLeftRound, UndoRightRound, AltArrowDown, Eraser
+} from "@solar-icons/vue"
 import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { AcceptableValue } from "reka-ui"
+import {
+    DropdownMenu, DropdownMenuContent,
+    DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+    Dialog, DialogContent, DialogHeader,
+    DialogTitle, DialogFooter,
+    DialogClose, DialogTrigger,
+    DialogDescription
+} from "@/components/ui/dialog"
+import type { EditorState } from "@/types/editor"
+
+const headerHeight = inject<Ref<number>>(
+    "headerHeight",
+    ref(0)
+)
 
 const props = withDefaults(
     defineProps<{
@@ -18,34 +39,34 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ "update:modelValue": [value: string] }>()
+const editorState = inject<Ref<EditorState>>("editorState", ref("closed"))
 
-const activeMarks = ref<string[]>([])
-const activeHeading = ref<string | null>(null)
+const activeHeading = ref<string | null>("Normal")
+const linkDialogOpen = ref(false)
+const linkUrl = ref("")
+
 
 function syncActiveMarks() {
     if (!editor.value) return
-
-    const marks: string[] = []
-    if (editor.value.isActive("bold")) marks.push("bold")
-    if (editor.value.isActive("italic")) marks.push("italic")
-    if (editor.value.isActive("code")) marks.push("code")
-    activeMarks.value = marks
-
-    const level = [1, 2, 3, 4].find((level) => editor.value?.isActive("heading", { level }))
-    activeHeading.value = level ? String(level) : null
+    const level = [1, 2, 3, 4].find((l) => editor.value?.isActive("heading", { level: l }))
+    activeHeading.value = level ? `H${level}` : "Normal"
 }
 
 const editor = useEditor({
     content: props.modelValue,
     extensions: [
-        StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, code: false }),
+        StarterKit.configure({
+            heading: { levels: [1, 2, 3, 4] },
+        }),
         CodeExtension,
+        Link.configure({
+            openOnClick: false,
+            HTMLAttributes: { class: "text-primary underline cursor-pointer" },
+        }),
         Placeholder.configure({ placeholder: props.placeholder }),
     ],
     editorProps: {
-        attributes: {
-            class: "prose-entry focus:outline-none",
-        },
+        attributes: { class: "prose-entry focus:outline-none" },
     },
     onUpdate: ({ editor }) => {
         emit("update:modelValue", editor.getHTML())
@@ -53,45 +74,67 @@ const editor = useEditor({
     },
     onSelectionUpdate: syncActiveMarks,
     onTransaction: syncActiveMarks,
+    onFocus: () => {
+        editorState.value = "focused"
+    },
 })
 
-function onMarksChange(payload: AcceptableValue | AcceptableValue[]) {
-    const next = Array.isArray(payload)
-        ? payload.filter(Boolean).map(String)
-        : payload
-            ? [String(payload)]
-            : []
-
+watch(editorState, async (state) => {
     if (!editor.value) return
+    await nextTick()
 
-    const chain = editor.value.chain().focus()
+    if (state === "focused") {
+        editor.value.commands.focus("end")
+        syncActiveMarks()
+    } else {
+        editor.value.commands.blur()
+    }
+}, { flush: "post" })
 
-    const prev = activeMarks.value
-
-    if (next.includes("bold") !== prev.includes("bold")) chain.toggleBold()
-    if (next.includes("italic") !== prev.includes("italic")) chain.toggleItalic()
-    if (next.includes("code") !== prev.includes("code")) chain.toggleCode()
-
-    chain.run()
-}
-
-function onHeadingChange(payload: AcceptableValue | AcceptableValue[]) {
-    const value = Array.isArray(payload) ? payload[0] : payload
-
-    const level = value ? Number(value) : undefined
-
+function setHeading(level: number | null) {
     if (!editor.value) return
-
     if (!level) {
         editor.value.chain().focus().setParagraph().run()
-        return
+    } else {
+        editor.value.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 }).run()
     }
+    syncActiveMarks()
+}
+
+
+function openLinkDialog() {
+    if (!editor.value) return
+    const currentUrl = editor.value.getAttributes("link").href || ""
+    linkUrl.value = currentUrl
+    linkDialogOpen.value = true
+}
+
+function applyLink() {
+    if (!editor.value) return
+
+    if (!linkUrl.value.trim()) {
+        editor.value.chain().focus().extendMarkRange("link").unsetLink().run()
+    } else {
+        let url = linkUrl.value.trim()
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url
+        }
+        editor.value.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
+    }
+    linkDialogOpen.value = false
+}
+
+function clearFormatting() {
+    if (!editor.value) return
 
     editor.value
         .chain()
         .focus()
-        .toggleHeading({ level: level as 1 | 2 | 3 | 4 })
+        .clearNodes()
+        .unsetAllMarks()
         .run()
+
+    syncActiveMarks()
 }
 
 watch(
@@ -106,59 +149,128 @@ defineExpose({ editor })
 </script>
 
 <template>
-    <div class="flex flex-col h-full">
-        <EditorContent :editor="editor" class="flex-1 overflow-y-auto px-4 pb-24 text-sm leading-relaxed" />
-
-        <div v-if="editor"
-            class="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border p-2 flex items-center gap-1.5"
-            :style="{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }">
-
-            <ToggleGroup type="single" :model-value="activeHeading ?? undefined" size="sm" class="rounded-md"
-                @update:model-value="onHeadingChange">
-                <ToggleGroupItem value="1" aria-label="Заголовок 1" class="rounded-md">H1</ToggleGroupItem>
-                <ToggleGroupItem value="2" aria-label="Заголовок 2" class="rounded-md">H2</ToggleGroupItem>
-                <ToggleGroupItem value="3" aria-label="Заголовок 3" class="rounded-md">H3</ToggleGroupItem>
-                <ToggleGroupItem value="4" aria-label="Заголовок 4" class="rounded-md">H4</ToggleGroupItem>
-            </ToggleGroup>
-
-            <ToggleGroup type="multiple" :model-value="activeMarks" size="sm" class="rounded-md"
-                @update:model-value="onMarksChange">
-                <ToggleGroupItem value="bold" aria-label="Жирный" class="rounded-md">
-                    <TextBold weight="Bold" class="size-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="italic" aria-label="Курсив" class="rounded-md">
-                    <TextItalic weight="Bold" class="size-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="code" aria-label="Код" class="rounded-md">
-                    <Code weight="Bold" class="size-4" />
-                </ToggleGroupItem>
-            </ToggleGroup>
-
-            <Button type="button" size="icon-sm" class="rounded-md"
-                :variant="editor.isActive('bulletList') ? 'secondary' : 'ghost'" aria-label="Маркированный список"
-                @click="editor.chain().focus().toggleBulletList().run()">
-                <ListCheck weight="Bold" class="size-4" />
-            </Button>
-
-            <Button type="button" size="icon-sm" class="rounded-md"
-                :variant="editor.isActive('orderedList') ? 'secondary' : 'ghost'" aria-label="Нумерованный список"
-                @click="editor.chain().focus().toggleOrderedList().run()">
-                <ListArrowDown weight="Bold" class="size-4" />
-            </Button>
-
-            <Button type="button" size="icon-sm" class="rounded-md"
-                :variant="editor.isActive('blockquote') ? 'secondary' : 'ghost'" aria-label="Цитата"
-                @click="editor.chain().focus().toggleBlockquote().run()">
-                <ChatRoundLine weight="Bold" class="size-4" />
-            </Button>
-
-            <Button type="button" size="icon-sm" class="rounded-md"
-                :variant="editor.isActive('codeBlock') ? 'secondary' : 'ghost'" aria-label="Блок кода"
-                @click="editor.chain().focus().toggleCodeBlock().run()">
-                <CodeSquare weight="Bold" class="size-4" />
-            </Button>
-        </div>
+    <div class="flex flex-col transition-all duration-300" :class="[
+        editorState !== 'closed'
+            ? 'fixed left-0 right-0 bottom-0 z-40 bg-background'
+            : 'h-full cursor-text'
+    ]" :style="editorState !== 'closed'
+        ? {
+            top: `calc(${headerHeight}px + var(--tg-safe-area-inset-top, 0px) + 1rem)`
+        }
+        : undefined
+        " @click="editorState === 'closed' && (editorState = 'open')">
+        <EditorContent :editor="editor" class="flex-1 overflow-y-auto px-4 pb-24 text-sm leading-relaxed" @click.stop />
     </div>
+
+    <Teleport to="#dock-toolbar-slot" v-if="editor && editorState === 'focused'">
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost" aria-label="Отменить"
+            :disabled="!editor.can().undo()" @click="editor.chain().focus().undo().run()">
+            <UndoLeftRound weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost" aria-label="Повторить"
+            :disabled="!editor.can().redo()" @click="editor.chain().focus().redo().run()">
+            <UndoRightRound weight="Bold" class="size-4" />
+        </Button>
+
+        <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
+
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('bold') ? 'secondary' : 'ghost'" aria-label="Жирный"
+            @click="editor.chain().focus().toggleBold().run()">
+            <TextBold weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('italic') ? 'secondary' : 'ghost'" aria-label="Курсив"
+            @click="editor.chain().focus().toggleItalic().run()">
+            <TextItalic weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('strike') ? 'secondary' : 'ghost'" aria-label="Зачеркнутый"
+            @click="editor.chain().focus().toggleStrike().run()">
+            <TextCross weight="Bold" class="size-4" />
+        </Button>
+
+        <Dialog v-model:open="linkDialogOpen">
+            <DialogTrigger as-child>
+                <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+                    :variant="editor.isActive('link') ? 'secondary' : 'ghost'" aria-label="Ссылка"
+                    @click="openLinkDialog">
+                    <LinkMinimalistic weight="Bold" class="size-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Insert link</DialogTitle>
+                    <DialogDescription>
+                        insert link to any site for save it
+                    </DialogDescription>
+                </DialogHeader>
+                <Label for="link" class="sr-only">
+                    Link
+                </Label>
+                <Input id="link" v-model="linkUrl" default-value="https://example.com" />
+
+                <DialogFooter>
+                    <DialogClose as-child>
+                        <Button type="button" variant="outline">Отмена</Button>
+                    </DialogClose>
+                    <Button type="button" @click="applyLink">
+                        {{ editor.isActive('link') ? 'Обновить' : 'Добавить' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
+
+        <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+                <Button type="button" size="sm" class="rounded-md shrink-0 gap-1 h-8 px-2" variant="ghost">
+                    <span class="text-xs font-medium">{{ activeHeading }}</span>
+                    <AltArrowDown weight="Bold" class="size-3" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" class="w-32">
+                <DropdownMenuItem @click="setHeading(null)" :class="{ 'bg-secondary': activeHeading === 'Normal' }">
+                    Normal
+                </DropdownMenuItem>
+                <DropdownMenuItem v-for="i in 4" :key="i" @click="setHeading(i)"
+                    :class="{ 'bg-secondary': activeHeading === `H${i}` }">
+                    H{{ i }}
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost"
+            aria-label="Очистить форматирование" @click="clearFormatting">
+            <Eraser weight="Bold" class="size-4" />
+        </Button>
+
+
+        <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
+
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('bulletList') ? 'secondary' : 'ghost'" aria-label="Маркированный список"
+            @click="editor.chain().focus().toggleBulletList().run()">
+            <ListCheck weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('orderedList') ? 'secondary' : 'ghost'" aria-label="Нумерованный список"
+            @click="editor.chain().focus().toggleOrderedList().run()">
+            <ListArrowDown weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('blockquote') ? 'secondary' : 'ghost'" aria-label="Цитата"
+            @click="editor.chain().focus().toggleBlockquote().run()">
+            <ChatRoundLine weight="Bold" class="size-4" />
+        </Button>
+        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+            :variant="editor.isActive('code') ? 'secondary' : 'ghost'" aria-label="Код"
+            @click="editor.chain().focus().toggleCode().run()">
+            <Code weight="Bold" class="size-4" />
+        </Button>
+
+    </Teleport>
 </template>
 
 <style>
@@ -290,12 +402,6 @@ defineExpose({ editor })
     float: left;
     pointer-events: none;
     height: 0;
-}
-
-.flex-wrap .toggle-group-item,
-.flex-wrap button {
-    border-radius: var(--radius) !important;
-    min-width: 2rem !important;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

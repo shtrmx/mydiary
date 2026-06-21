@@ -141,10 +141,6 @@ function handleDayClick(day: HeatmapDay) {
                 </span>
             </div>
 
-            <span class="text-center text-xs text-muted-foreground capitalize transition-opacity duration-200">
-                {{ periodLabel }}
-            </span>
-
             <span class="flex items-center gap-1 text-sm font-medium text-orange-500">
                 <Fire weight="Bold" class="size-4" />
                 {{ streak }}

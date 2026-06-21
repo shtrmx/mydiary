@@ -1,39 +1,47 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, watchEffect, inject, type Ref } from "vue"
 import { useRouter } from "vue-router"
 import { toast } from "vue-sonner"
-import { CheckCircle } from "@solar-icons/vue"
 import EntryEditor from "@/components/write/entryEditor.vue"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
 import { createEntry } from "@/lib/db/diary"
+import type { EditorState } from "@/types/editor"
 
 const router = useRouter()
 const content = ref("")
 const saving = ref(false)
 
+const editorState = inject<Ref<EditorState>>("editorState", ref("closed"))
+const canPublish = inject<Ref<boolean>>("canPublish", ref(false))
+const publish = inject<Ref<() => void>>("publish", ref(() => { }))
+
 function isEmpty(html: string): boolean {
     return html.replace(/<[^>]*>/g, "").trim().length === 0
 }
 
-async function save() {
+watchEffect(() => {
+    canPublish.value = !isEmpty(content.value)
+})
+
+async function doPublish() {
     if (isEmpty(content.value) || saving.value) return
 
     saving.value = true
-    await createEntry(content.value)
-    toast.success("Запись сохранена")
-    router.push("/home")
+    try {
+        await createEntry(content.value)
+        toast.success("Запись опубликована")
+        router.push("/home")
+    } catch (e) {
+        toast.error("Ошибка при публикации")
+    } finally {
+        saving.value = false
+    }
 }
+
+publish.value = doPublish
 </script>
 
 <template>
-    <div class="flex flex-1 flex-col gap-4 pb-4">
+    <div class="flex flex-1 flex-col gap-4" :class="editorState === 'closed' ? 'pb-4' : 'pb-0'">
         <EntryEditor v-model="content" />
-
-        <Button type="button" class="ml-auto rounded-full" :disabled="isEmpty(content) || saving" @click="save">
-            <Spinner v-if="saving" class="size-4 animate-spin" />
-            <CheckCircle v-else weight="Bold" class="size-4" />
-            Сохранить
-        </Button>
     </div>
 </template>

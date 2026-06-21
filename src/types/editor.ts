@@ -1,0 +1,1 @@
+export type EditorState = "closed" | "open" | "focused"

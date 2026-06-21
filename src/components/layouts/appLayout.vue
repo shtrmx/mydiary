@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from "vue-router"
-import { computed, ref } from "vue"
+import { computed, provide, ref, watch } from "vue"
 
 import Header from "@/components/blocks/header.vue"
 import DockBar from "@/components/blocks/dockBar.vue"
 import { useElementSize } from "@/utils/hooks/useElementSize"
+import type { EditorState } from "@/types/editor"
 
 const headerRef = ref<HTMLElement | null>(null)
 const dockRef = ref<HTMLElement | null>(null)
 const route = useRoute()
-const isWriting = computed(() => ['write', 'entry'].includes(route.name as string))
+const isWriting = computed(() => route.path.startsWith("/add"))
+
+const editorState = ref<EditorState>("closed")
+const canPublish = ref(false)
+const publish = ref<() => void>(() => { })
+const remove = ref<() => void>(() => { })
+
+provide("editorState", editorState)
+provide("canPublish", canPublish)
+provide("publish", publish)
+provide("remove", remove)
 
 const { height: headerHeight } = useElementSize(headerRef)
 const { height: dockHeight } = useElementSize(dockRef)
@@ -17,10 +28,15 @@ const { height: dockHeight } = useElementSize(dockRef)
 const mainStyle = computed(() => ({
     paddingTop: `calc(${headerHeight.value}px + var(--tg-safe-area-inset-top, 0px) + 1rem)`,
     paddingBottom: isWriting.value
-        ? 'calc(env(safe-area-inset-bottom) + 60px)'
+        ? "calc(env(safe-area-inset-bottom) + 60px)"
         : `calc(${dockHeight.value}px + var(--tg-safe-area-inset-bottom, 0px) + 3rem)`,
 }))
-
+provide("headerHeight", headerHeight)
+watch(headerHeight, (h) => {
+    if (h > 0) {
+        document.documentElement.style.setProperty('--app-header-height', `${h}px`)
+    }
+}, { immediate: true })
 </script>
 
 <template>
@@ -33,6 +49,6 @@ const mainStyle = computed(() => ({
             </div>
         </main>
 
-        <DockBar v-if="!isWriting" ref="dockRef" />
+        <DockBar ref="dockRef" />
     </div>
 </template>

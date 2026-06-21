@@ -6,8 +6,7 @@ import {
   OctagonXIcon,
   Loader2Icon,
   XIcon,
-} from '@lucide/vue';
-
+} from '@lucide/vue'
 
 import type { ToasterProps } from "vue-sonner"
 import { Toaster as Sonner } from "vue-sonner"
@@ -36,7 +35,7 @@ const props = defineProps<ToasterProps>()
   }" v-bind="{
     ...props,
     toastOptions: undefined,
-  }" :toast-options="toastOptions">
+  }" :toast-options="toastOptions" position="top-center">
     <template #success-icon>
       <CircleCheckIcon class="size-4" />
     </template>
@@ -59,3 +58,18 @@ const props = defineProps<ToasterProps>()
     </template>
   </Sonner>
 </template>
+
+<style>
+[data-sonner-toaster][data-position="top-center"] {
+  top: calc(var(--app-header-height, 20px) + var(--tg-safe-area-inset-top, 0px) + env(safe-area-inset-top, 0px) + 16px) !important;
+
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: max-content !important;
+  max-width: calc(100% - 2rem) !important;
+}
+
+:root {
+  --sonner-top-offset: calc(var(--tg-safe-area-inset-top, 0px) + var(--app-header-height, 20px));
+}
+</style>

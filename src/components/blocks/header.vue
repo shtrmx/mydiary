@@ -6,7 +6,7 @@ const title = usePageTitle()
 </script>
 
 <template>
-    <div class="fixed right-0 left-0 z-40 flex justify-center px-4"
+    <div class="fixed right-0 left-0 z-60 flex justify-center px-4"
         :style="{ top: 'calc(var(--tg-content-safe-area-inset-top, 0px) + 7px)' }">
         <Motion as="header" layout="position" :transition="{ type: 'spring', stiffness: 500, damping: 40, mass: 0.6 }"
             class="m-1 inline-flex h-8 items-center gap-3 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-5 pl-2 shadow-sm backdrop-blur-xl">
