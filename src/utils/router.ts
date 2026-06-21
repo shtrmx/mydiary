@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
                 meta: { title: "Новая запись" },
             },
             {
-                path: "entry/:id",
+                path: "add/entry/:id",
                 component: Entry,
                 meta: { title: "Запись" },
             },

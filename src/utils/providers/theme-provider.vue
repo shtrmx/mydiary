@@ -2,10 +2,10 @@
 import { onMounted } from "vue"
 import { useThemeStore } from "@/utils/stores/theme"
 
-const themeStore = useThemeStore()
+const theme = useThemeStore()
 
 onMounted(() => {
-    themeStore.init()
+    theme.init()
 })
 </script>
 

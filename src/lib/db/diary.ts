@@ -80,4 +80,26 @@ export function getTotalEntryCount(): Promise<number> {
     return db.entries.count()
 }
 
+export async function getCurrentStreak(): Promise<number> {
+    const stats = await getDayStatsMap()
+    if (stats.size === 0) return 0
+
+    const today = new Date()
+    const todayKey = toDayKey(today)
+
+    let cursor = new Date(today)
+    if (!stats.has(todayKey)) {
+        cursor.setDate(cursor.getDate() - 1)
+        if (!stats.has(toDayKey(cursor))) return 0
+    }
+
+    let streak = 0
+    while (stats.has(toDayKey(cursor))) {
+        streak += 1
+        cursor.setDate(cursor.getDate() - 1)
+    }
+
+    return streak
+}
+
 export { toDayKey }

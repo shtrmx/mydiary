@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import { useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 import { CheckCircle } from "@solar-icons/vue"
 import EntryEditor from "@/components/write/entryEditor.vue"
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { createEntry } from "@/lib/db/diary"
 
 const router = useRouter()
@@ -18,6 +21,7 @@ async function save() {
 
     saving.value = true
     await createEntry(content.value)
+    toast.success("Запись сохранена")
     router.push("/home")
 }
 </script>
@@ -26,11 +30,10 @@ async function save() {
     <div class="flex flex-1 flex-col gap-4 pb-4">
         <EntryEditor v-model="content" />
 
-        <button type="button"
-            class="ml-auto flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
-            :disabled="isEmpty(content) || saving" @click="save">
-            <CheckCircle weight="Bold" class="size-4" />
+        <Button type="button" class="ml-auto rounded-full" :disabled="isEmpty(content) || saving" @click="save">
+            <Spinner v-if="saving" class="size-4 animate-spin" />
+            <CheckCircle v-else weight="Bold" class="size-4" />
             Сохранить
-        </button>
+        </Button>
     </div>
 </template>

@@ -33,7 +33,6 @@ async function onPinClick(event: Event) {
         class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-accent/40"
         @click="emit('open', entry.id)">
         <span class="flex items-center gap-1.5 truncate text-sm">
-            <Heart v-if="entry.pinned" weight="Bold" class="size-3 shrink-0 text-pink-500" />
             <span class="truncate text-foreground/90">{{ preview }}</span>
         </span>
 

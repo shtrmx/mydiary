@@ -21,7 +21,7 @@ useIntersectionTrigger(sentinel, loadMore)
 onMounted(reset)
 
 function openEntry(id: number) {
-    router.push(`/entry/${id}`)
+    router.push(`/add/entry/${id}`)
 }
 </script>
 
