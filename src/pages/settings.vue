@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import { toast } from "vue-sonner"
-import { Download, Upload, TrashBinMinimalistic, Sun, Moon } from "@solar-icons/vue"
+import {
+    Download,
+    Upload,
+    TrashBinMinimalistic,
+    Sun,
+    Moon,
+    AltArrowRight,
+} from "@solar-icons/vue"
+
 import { getTelegramProfile } from "@/lib/telegram/profile"
-import { exportAllEntries, downloadExport, importEntries, deleteAllEntries, ImportError } from "@/lib/db/backup"
+import {
+    exportAllEntries,
+    downloadExport,
+    importEntries,
+    deleteAllEntries,
+    ImportError,
+} from "@/lib/db/backup"
+
 import { useThemeStore } from "@/utils/stores/theme"
 import { useLiveQuery } from "@/utils/hooks/useLiveQuery"
 import { getTotalEntryCount } from "@/lib/db/diary"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -27,19 +41,26 @@ import {
 
 const profile = getTelegramProfile()
 const theme = useThemeStore()
+
 const totalEntries = useLiveQuery(getTotalEntryCount, 0)
 
 const importInput = ref<HTMLInputElement | null>(null)
+
 const importing = ref(false)
 const exporting = ref(false)
 const deleting = ref(false)
 
 async function onExport() {
     exporting.value = true
-    const blob = await exportAllEntries()
-    downloadExport(blob)
-    exporting.value = false
-    toast.success("Файл экспорта скачан")
+
+    try {
+        const blob = await exportAllEntries()
+        downloadExport(blob)
+
+        toast.success("Файл экспорта скачан")
+    } finally {
+        exporting.value = false
+    }
 }
 
 function onImportClick() {
@@ -48,6 +69,7 @@ function onImportClick() {
 
 async function onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
+
     if (!file) return
 
     importing.value = true
@@ -56,127 +78,197 @@ async function onFileSelected(event: Event) {
         const count = await importEntries(file)
         toast.success(`Импортировано записей: ${count}`)
     } catch (error) {
-        toast.error(error instanceof ImportError ? error.message : "Не удалось импортировать файл")
+        toast.error(
+            error instanceof ImportError
+                ? error.message
+                : "Не удалось импортировать файл",
+        )
     } finally {
         importing.value = false
-        if (importInput.value) importInput.value.value = ""
+
+        if (importInput.value) {
+            importInput.value.value = ""
+        }
     }
 }
 
 async function onDeleteAll() {
     deleting.value = true
-    await deleteAllEntries()
-    deleting.value = false
-    toast.success("Все данные удалены")
+
+    try {
+        await deleteAllEntries()
+        toast.success("Все данные удалены")
+    } finally {
+        deleting.value = false
+    }
 }
 </script>
 
 <template>
-    <div class="flex flex-1 flex-col gap-6 pb-4">
-        <Card>
-            <CardContent class="flex items-center gap-3">
-                <img v-if="profile?.photoUrl" :src="profile.photoUrl" alt=""
-                    class="size-12 rounded-full object-cover" />
+    <div class="space-y-6 pb-8">
+
+        <!-- Profile -->
+
+        <Card class="p-4">
+            <div class="flex items-center gap-4">
+
+                <img v-if="profile?.photoUrl" :src="profile.photoUrl" alt="Avatar"
+                    class="size-16 rounded-full object-cover">
+
                 <div v-else
-                    class="flex size-12 items-center justify-center rounded-full bg-accent text-lg font-semibold text-accent-foreground">
-                    {{ (profile?.displayName ?? "?").charAt(0).toUpperCase() }}
+                    class="flex size-16 items-center justify-center rounded-full bg-accent text-xl font-semibold">
+                    {{ (profile?.displayName ?? "?")[0].toUpperCase() }}
                 </div>
 
-                <div class="flex flex-1 flex-col">
-                    <span class="font-medium">{{ profile?.displayName ?? "Гость" }}</span>
-                    <span v-if="profile?.username" class="text-sm text-muted-foreground">@{{ profile.username }}</span>
-                    <span v-else-if="!profile" class="text-sm text-muted-foreground">Открыто вне Telegram</span>
+                <div class="min-w-0 flex-1">
+                    <h2 class="truncate font-heading text-lg font-semibold">
+                        {{ profile?.displayName ?? "Гость" }}
+                    </h2>
+
+                    <p class="text-sm text-muted-foreground">
+                        @{{ profile?.username ?? "username" }}
+                    </p>
                 </div>
 
-                <Badge variant="secondary">{{ totalEntries }} записей</Badge>
-            </CardContent>
+                <Badge variant="secondary">
+                    {{ totalEntries }}
+                </Badge>
+
+            </div>
         </Card>
 
-        <section class="flex flex-col gap-2">
-            <h2 class="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Внешний вид</h2>
+        <!-- Data -->
 
-            <Card>
-                <CardContent class="flex items-center justify-between">
-                    <span class="text-sm">Тема оформления</span>
+        <div class="space-y-2">
 
-                    <ToggleGroup type="single" :model-value="theme.mode" size="sm"
-                        @update:model-value="(value) => value && theme.set(value as 'light' | 'dark')">
-                        <ToggleGroupItem value="light" aria-label="Светлая тема">
-                            <Sun weight="Bold" class="size-4" />
-                            Светлая
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="dark" aria-label="Тёмная тема">
-                            <Moon weight="Bold" class="size-4" />
-                            Тёмная
-                        </ToggleGroupItem>
-                    </ToggleGroup>
-                </CardContent>
-            </Card>
-        </section>
+            <h3 class="px-2 text-sm font-medium text-muted-foreground">
+                Данные
+            </h3>
 
-        <Separator />
+            <Card class="py-0">
+                <div class="divide-y">
 
-        <section class="flex flex-col gap-2">
-            <h2 class="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Данные</h2>
-
-            <Card>
-                <CardContent class="flex flex-col gap-2">
-                    <Button type="button" variant="outline" class="justify-start" :disabled="exporting"
+                    <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
                         @click="onExport">
+                        <div class="flex items-center gap-3">
+                            <Download class="size-5 text-primary" />
+                            <span>Экспортировать данные</span>
+                        </div>
+
                         <Spinner v-if="exporting" class="size-4 animate-spin" />
-                        <Download v-else weight="Outline" class="size-4" />
-                        Экспортировать записи
-                    </Button>
 
-                    <Button type="button" variant="outline" class="justify-start" :disabled="importing"
+                        <AltArrowRight v-else class="size-5 text-muted-foreground" />
+                    </button>
+
+                    <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
                         @click="onImportClick">
+                        <div class="flex items-center gap-3">
+                            <Upload class="size-5 text-primary" />
+                            <span>Импортировать данные</span>
+                        </div>
+
                         <Spinner v-if="importing" class="size-4 animate-spin" />
-                        <Upload v-else weight="Outline" class="size-4" />
-                        Импортировать записи
-                    </Button>
 
-                    <input ref="importInput" type="file" accept="application/json" class="hidden"
-                        @change="onFileSelected" />
-                </CardContent>
+                        <AltArrowRight v-else class="size-5 text-muted-foreground" />
+                    </button>
+
+                </div>
             </Card>
-        </section>
 
-        <Separator />
+            <input ref="importInput" type="file" accept="application/json" class="hidden" @change="onFileSelected">
+        </div>
 
-        <section class="flex flex-col gap-2">
-            <h2 class="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">Опасная зона</h2>
+        <!-- Appearance -->
 
-            <Card class="border-destructive/30">
-                <CardContent>
-                    <AlertDialog>
-                        <AlertDialogTrigger as-child>
-                            <Button type="button" variant="ghost"
-                                class="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive">
-                                <TrashBinMinimalistic weight="Outline" class="size-4" />
-                                Удалить все данные
-                            </Button>
-                        </AlertDialogTrigger>
+        <div class="space-y-2">
 
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Удалить все данные?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Это удалит все записи дневника без возможности восстановления. Перед удалением
-                                    рекомендуем сделать экспорт.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
+            <h3 class="px-2 text-sm font-medium text-muted-foreground">
+                Внешний вид
+            </h3>
 
-                            <AlertDialogFooter>
-                                <AlertDialogCancel :disabled="deleting">Отмена</AlertDialogCancel>
-                                <AlertDialogAction :disabled="deleting" @click="onDeleteAll">
-                                    <Spinner v-if="deleting" class="size-4 animate-spin" />
-                                    Да, удалить всё
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardContent>
+            <Card class="py-0">
+
+                <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
+                    @click="theme.toggle()">
+                    <div class="flex items-center gap-3">
+
+                        <Sun v-if="theme.mode === 'light'" class="size-5" />
+
+                        <Moon v-else class="size-5" />
+
+                        <span>Тема оформления</span>
+
+                    </div>
+
+                    <span class="text-sm text-muted-foreground">
+                        {{
+                            theme.mode === "light"
+                                ? "Светлая"
+                                : "Тёмная"
+                        }}
+                    </span>
+                </button>
+
             </Card>
-        </section>
+        </div>
+
+        <!-- Danger -->
+
+        <div class="space-y-2">
+
+            <h3 class="px-2 text-sm font-medium text-destructive">
+                Опасная зона
+            </h3>
+
+            <Card class="border-destructive/20 py-0">
+
+                <AlertDialog>
+
+                    <AlertDialogTrigger as-child>
+
+                        <button
+                            class="flex w-full items-center gap-3 p-4 text-destructive transition-colors hover:bg-destructive/5">
+                            <TrashBinMinimalistic class="size-5" />
+                            <span>Удалить все данные</span>
+                        </button>
+
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                Удалить все данные?
+                            </AlertDialogTitle>
+
+                            <AlertDialogDescription>
+                                Все записи будут удалены без возможности восстановления.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+
+                        <AlertDialogFooter>
+
+                            <AlertDialogCancel :disabled="deleting">
+                                Отмена
+                            </AlertDialogCancel>
+
+                            <AlertDialogAction :disabled="deleting" @click="onDeleteAll">
+                                <Spinner v-if="deleting" class="size-4 animate-spin" />
+
+                                <span v-else>
+                                    Удалить
+                                </span>
+                            </AlertDialogAction>
+
+                        </AlertDialogFooter>
+
+                    </AlertDialogContent>
+
+                </AlertDialog>
+
+            </Card>
+
+        </div>
+
     </div>
 </template>

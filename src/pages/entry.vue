@@ -36,13 +36,24 @@ const notFound = ref(false)
 
 watchEffect(async () => {
     const id = Number(route.params.id)
+
+    if (isNaN(id)) {
+        notFound.value = true
+        entry.value = null
+        return
+    }
+
     const found = await db.entries.get(id)
 
-    entry.value = found ?? null
-    content.value = found?.html ?? ""
-    notFound.value = !found
+    if (found) {
+        entry.value = found
+        content.value = found.html ?? ""
+        notFound.value = false
+    } else {
+        entry.value = null
+        notFound.value = true
+    }
 })
-
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
 function onContentChange(html: string) {

@@ -1,3 +1,4 @@
+// src/utils/hooks/useScrollDirection.ts
 import { onMounted, onUnmounted, ref, type Ref } from "vue"
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -14,6 +15,7 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
 
 export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
     const hidden = ref(false)
+    const isScrolled = ref(false) // Новый флаг для кнопки "Наверх"
     let scrollEl: HTMLElement | null = null
     let lastScrollTop = 0
 
@@ -25,6 +27,9 @@ export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
         const current = scrollEl.scrollTop
         const delta = current - lastScrollTop
 
+        // Если проскроллили больше 400px — показываем кнопку "Наверх"
+        isScrolled.value = current > 400
+
         if (current <= 0) {
             hidden.value = false
         } else if (Math.abs(delta) > THRESHOLD_PX) {
@@ -32,6 +37,10 @@ export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
         }
 
         lastScrollTop = current
+    }
+
+    function scrollToTop() {
+        scrollEl?.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     onMounted(() => {
@@ -43,5 +52,5 @@ export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
         scrollEl?.removeEventListener("scroll", onScroll)
     })
 
-    return hidden
+    return { hidden, isScrolled, scrollToTop }
 }

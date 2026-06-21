@@ -1,4 +1,5 @@
-import { computed, ref, type ComputedRef } from "vue"
+// src/utils/hooks/useEntryHeatmap.ts
+import { computed, type ComputedRef } from "vue"
 import { useLiveQuery } from "./useLiveQuery"
 import { getDayStatsMap, getTotalEntryCount, getCurrentStreak, toDayKey, type DayStats } from "@/lib/db/diary"
 
@@ -8,52 +9,41 @@ export interface HeatmapDay {
     hasPinned: boolean
     isToday: boolean
     inFuture: boolean
+    date: Date // Добавили дату для вычисления заголовка
 }
 
 const DAYS_PER_WEEK = 7
-const WEEKS_PER_PERIOD = 13
+const MIN_WEEKS = 13 // Минимум 13 недель (около 3 месяцев) для красивого вида
 
 export function useEntryHeatmap() {
     const stats = useLiveQuery(getDayStatsMap, new Map<string, DayStats>())
     const total = useLiveQuery(getTotalEntryCount, 0)
     const streak = useLiveQuery(getCurrentStreak, 0)
 
-    const periodOffset = ref(0)
-    const canGoNext = computed(() => periodOffset.value < 0)
-
-    function goToPreviousPeriod() {
-        periodOffset.value -= 1
-    }
-
-    function goToNextPeriod() {
-        if (canGoNext.value) periodOffset.value += 1
-    }
-
-    const periodLabel = computed(() => {
-        const today = new Date()
-        const periodEnd = new Date(today)
-        periodEnd.setDate(periodEnd.getDate() + periodOffset.value * WEEKS_PER_PERIOD * DAYS_PER_WEEK)
-
-        const periodStart = new Date(periodEnd)
-        periodStart.setDate(periodStart.getDate() - (WEEKS_PER_PERIOD * DAYS_PER_WEEK - 1))
-
-        const startLabel = periodStart.toLocaleDateString("ru-RU", { month: "short", year: "numeric" })
-        const endLabel = periodEnd.toLocaleDateString("ru-RU", { month: "short", year: "numeric" })
-
-        return startLabel === endLabel ? startLabel : `${startLabel} — ${endLabel}`
-    })
-
     const weeks: ComputedRef<HeatmapDay[][]> = computed(() => {
         const today = new Date()
-        const todayKey = toDayKey(today)
-        const totalDays = WEEKS_PER_PERIOD * DAYS_PER_WEEK
+        today.setHours(0, 0, 0, 0) // Нормализуем время
 
-        const periodEndOffset = periodOffset.value * totalDays
+        // Ищем самую старую запись из статистики, чтобы знать, откуда начать
+        const keys = Array.from(stats.value.keys()).sort()
+        const oldestKey = keys.length > 0 ? keys[0] : toDayKey(today)
+        const oldestDate = new Date(oldestKey)
+
+        // Вычисляем, сколько дней нужно отрендерить
+        const msPerDay = 1000 * 60 * 60 * 24
+        const daysDiff = Math.floor((today.getTime() - oldestDate.getTime()) / msPerDay)
+
+        // Берем минимум 13 недель или количество недель с первой записи (+1 для запаса)
+        const targetWeeks = Math.max(MIN_WEEKS, Math.ceil(daysDiff / DAYS_PER_WEEK) + 1)
+        const totalDaysToGenerate = targetWeeks * DAYS_PER_WEEK
+
         const days: HeatmapDay[] = []
+        const todayKey = toDayKey(today)
 
-        for (let i = totalDays - 1; i >= 0; i--) {
+        // Генерируем дни задом наперед (от старых к сегодня)
+        for (let i = totalDaysToGenerate - 1; i >= 0; i--) {
             const date = new Date(today)
-            date.setDate(date.getDate() + periodEndOffset - i)
+            date.setDate(date.getDate() - i)
 
             const dayKey = toDayKey(date)
             const dayStats = stats.value.get(dayKey)
@@ -64,6 +54,7 @@ export function useEntryHeatmap() {
                 hasPinned: dayStats?.hasPinned ?? false,
                 isToday: dayKey === todayKey,
                 inFuture: date.getTime() > today.getTime(),
+                date: new Date(date)
             })
         }
 
@@ -75,5 +66,5 @@ export function useEntryHeatmap() {
         return grid
     })
 
-    return { weeks, total, streak, periodLabel, periodOffset, canGoNext, goToPreviousPeriod, goToNextPeriod }
+    return { weeks, total, streak }
 }

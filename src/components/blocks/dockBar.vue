@@ -16,18 +16,27 @@ const items = [
     }">
         <nav
             class="flex h-16 items-center gap-2 rounded-full border border-border bg-card/70 p-1 shadow-lg backdrop-blur-xl">
-            <RouterLink v-for="item in items" :key="item.to" :to="item.to" class="relative z-10 flex h-full"
-                v-slot="{ isActive: linkActive }">
-                <div class="relative flex min-w-24 flex-col items-center justify-center gap-1 rounded-3xl px-4 py-1"
-                    :class="linkActive ? 'text-primary-foreground' : 'text-muted-foreground'">
-                    <Motion v-if="linkActive" class="absolute inset-0 -z-10 rounded-full bg-primary"
-                        :initial="{ opacity: 0, scale: 0.8 }" :animate="{ opacity: 1, scale: 1 }"
-                        :transition="{ type: 'spring', stiffness: 300, damping: 25 }" />
+            <RouterLink v-for="item in items" :key="item.to" :to="item.to"
+                v-slot="{ href, navigate, isActive, isExactActive }" custom>
+                <a :href="href" @click="navigate" class="relative z-10 flex h-full">
+                    <div class="relative flex min-w-24 flex-col items-center justify-center gap-1 rounded-3xl px-4 py-1 transition-colors"
+                        :class="[
+                            (item.to === '/home' ? isExactActive : $route.path.startsWith(item.to))
+                                ? 'text-primary-foreground'
+                                : 'text-muted-foreground'
+                        ]">
+                        <Motion v-if="(item.to === '/home' ? isExactActive : $route.path.startsWith(item.to))"
+                            class="absolute inset-0 -z-10 rounded-full bg-primary" :initial="{ opacity: 0, scale: 0.8 }"
+                            :animate="{ opacity: 1, scale: 1 }"
+                            :transition="{ type: 'spring', stiffness: 300, damping: 25 }" />
 
-                    <component :is="item.icon" :weight="linkActive ? 'Bold' : 'Linear'" class="size-6" />
+                        <component :is="item.icon"
+                            :weight="(item.to === '/home' ? isExactActive : $route.path.startsWith(item.to)) ? 'Bold' : 'Linear'"
+                            class="size-6" />
 
-                    <span class="text-xs">{{ item.label }}</span>
-                </div>
+                        <span class="text-xs">{{ item.label }}</span>
+                    </div>
+                </a>
             </RouterLink>
         </nav>
     </div>

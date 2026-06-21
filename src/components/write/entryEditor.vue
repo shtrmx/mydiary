@@ -7,6 +7,7 @@ import CodeExtension from "@tiptap/extension-code"
 import { TextBold, TextItalic, ListCheck, ListArrowDown, ChatRoundLine, Code, CodeSquare } from "@solar-icons/vue"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useIsMobile } from "@/utils/hooks/useMobile"
 
 const props = withDefaults(
     defineProps<{
@@ -17,6 +18,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ "update:modelValue": [value: string] }>()
+const isMobile = useIsMobile()
 
 const activeMarks = ref<string[]>([])
 const activeHeading = ref<string | null>(null)
@@ -87,8 +89,13 @@ defineExpose({ editor })
 </script>
 
 <template>
-    <div class="flex flex-col gap-3">
-        <div v-if="editor" class="flex flex-wrap items-center gap-1.5 border-b border-border pb-2">
+    <div class="flex flex-col h-full">
+        <EditorContent :editor="editor" class="flex-1 overflow-y-auto px-4 pb-24 text-sm leading-relaxed" />
+
+        <div v-if="editor"
+            class="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border p-2 flex items-center gap-1.5"
+            :style="{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }">
+
             <ToggleGroup type="single" :model-value="activeHeading ?? undefined" size="sm" class="rounded-md"
                 @update:model-value="onHeadingChange">
                 <ToggleGroupItem value="1" aria-label="Заголовок 1" class="rounded-md">H1</ToggleGroupItem>
@@ -134,8 +141,6 @@ defineExpose({ editor })
                 <CodeSquare weight="Bold" class="size-4" />
             </Button>
         </div>
-
-        <EditorContent :editor="editor" class="min-h-32 text-sm leading-relaxed" />
     </div>
 </template>
 
@@ -268,5 +273,20 @@ defineExpose({ editor })
     float: left;
     pointer-events: none;
     height: 0;
+}
+
+.flex-wrap .toggle-group-item,
+.flex-wrap button {
+    border-radius: var(--radius) !important;
+    min-width: 2rem !important;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>

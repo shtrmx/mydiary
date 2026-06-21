@@ -2,31 +2,17 @@ import { defineStore } from "pinia"
 
 export type ThemeMode = "light" | "dark"
 
-interface ThemeState {
-    mode: ThemeMode
-}
-
 export const useThemeStore = defineStore("theme", {
-    state: (): ThemeState => ({
-        mode: "dark",
+    state: () => ({
+        mode: "dark" as ThemeMode,
     }),
 
     actions: {
         init() {
-            const saved = localStorage.getItem("theme") as ThemeMode | null
-            if (saved) {
-                this.mode = saved
-            } else {
-                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-                this.mode = prefersDark ? "dark" : "light"
-            }
-
             this.apply()
         },
-
         toggle() {
-            this.mode = this.mode === "dark" ? "light" : "dark"
-            this.apply()
+            this.set(this.mode === "dark" ? "light" : "dark")
         },
 
         set(mode: ThemeMode) {
@@ -42,12 +28,8 @@ export const useThemeStore = defineStore("theme", {
             } else {
                 root.classList.remove("dark")
             }
+        }
+    },
 
-            localStorage.setItem("theme", this.mode)
-        },
-    },
-    persist: {
-        key: "theme",
-        storage: localStorage,
-    },
+    persist: true,
 })
