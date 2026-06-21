@@ -16,8 +16,8 @@ const items = [
     }">
         <nav
             class="flex h-16 items-center gap-2 rounded-full border border-border bg-card/70 p-1 shadow-lg backdrop-blur-xl">
-            <RouterLink v-for="item in items" :key="item.to" :to="item.to"
-                v-slot="{ href, navigate, isActive, isExactActive }" custom>
+            <RouterLink v-for="item in items" :key="item.to" :to="item.to" v-slot="{ href, navigate, isExactActive }"
+                custom>
                 <a :href="href" @click="navigate" class="relative z-10 flex h-full">
                     <div class="relative flex min-w-24 flex-col items-center justify-center gap-1 rounded-3xl px-4 py-1 transition-colors"
                         :class="[

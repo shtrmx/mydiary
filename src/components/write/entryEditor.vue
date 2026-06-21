@@ -7,7 +7,7 @@ import CodeExtension from "@tiptap/extension-code"
 import { TextBold, TextItalic, ListCheck, ListArrowDown, ChatRoundLine, Code, CodeSquare } from "@solar-icons/vue"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { useIsMobile } from "@/utils/hooks/useMobile"
+import type { AcceptableValue } from "reka-ui"
 
 const props = withDefaults(
     defineProps<{
@@ -18,7 +18,6 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ "update:modelValue": [value: string] }>()
-const isMobile = useIsMobile()
 
 const activeMarks = ref<string[]>([])
 const activeHeading = ref<string | null>(null)
@@ -56,17 +55,31 @@ const editor = useEditor({
     onTransaction: syncActiveMarks,
 })
 
-function onMarksChange(next: string[]) {
+function onMarksChange(payload: AcceptableValue | AcceptableValue[]) {
+    const next = Array.isArray(payload)
+        ? payload.filter(Boolean).map(String)
+        : payload
+            ? [String(payload)]
+            : []
+
     if (!editor.value) return
 
     const chain = editor.value.chain().focus()
-    if (next.includes("bold") !== activeMarks.value.includes("bold")) chain.toggleBold()
-    if (next.includes("italic") !== activeMarks.value.includes("italic")) chain.toggleItalic()
-    if (next.includes("code") !== activeMarks.value.includes("code")) chain.toggleCode()
+
+    const prev = activeMarks.value
+
+    if (next.includes("bold") !== prev.includes("bold")) chain.toggleBold()
+    if (next.includes("italic") !== prev.includes("italic")) chain.toggleItalic()
+    if (next.includes("code") !== prev.includes("code")) chain.toggleCode()
+
     chain.run()
 }
 
-function onHeadingChange(level: string | undefined) {
+function onHeadingChange(payload: AcceptableValue | AcceptableValue[]) {
+    const value = Array.isArray(payload) ? payload[0] : payload
+
+    const level = value ? Number(value) : undefined
+
     if (!editor.value) return
 
     if (!level) {
@@ -74,7 +87,11 @@ function onHeadingChange(level: string | undefined) {
         return
     }
 
-    editor.value.chain().focus().toggleHeading({ level: Number(level) as 1 | 2 | 3 | 4 }).run()
+    editor.value
+        .chain()
+        .focus()
+        .toggleHeading({ level: level as 1 | 2 | 3 | 4 })
+        .run()
 }
 
 watch(
