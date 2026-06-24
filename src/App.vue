@@ -4,6 +4,8 @@ import { RouterView } from "vue-router"
 import TelegramUIProvider from "@/utils/providers/telegram-ui.vue"
 import ThemeProvider from "@/utils/providers/theme-provider.vue"
 import { Toaster } from "@/components/ui/sonner"
+import UpdatePopup from '@/components/blocks/updatePopup.vue'
+import ChangelogDialog from '@/components/blocks/cahngelogDialog.vue'
 </script>
 
 <template>
@@ -13,4 +15,6 @@ import { Toaster } from "@/components/ui/sonner"
       <Toaster />
     </TelegramUIProvider>
   </ThemeProvider>
+  <UpdatePopup />
+  <ChangelogDialog />
 </template>

@@ -8,6 +8,7 @@ import {
     Sun,
     Moon,
     AltArrowRight,
+    Settings, User
 } from "@solar-icons/vue"
 
 import { getTelegramProfile } from "@/lib/telegram/profile"
@@ -39,6 +40,11 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+
+import EditDialog from "@/components/blocks/editDialog.vue"
+
+const appVersion = __APP_VERSION__
+
 const profile = getTelegramProfile()
 const theme = useThemeStore()
 
@@ -57,7 +63,7 @@ async function onExport() {
         const blob = await exportAllEntries()
         downloadExport(blob)
 
-        toast.success("Файл экспорта скачан")
+        toast.success("File was saved!")
     } finally {
         exporting.value = false
     }
@@ -76,12 +82,12 @@ async function onFileSelected(event: Event) {
 
     try {
         const count = await importEntries(file)
-        toast.success(`Импортировано записей: ${count}`)
+        toast.success(`Notes was imported: ${count}`)
     } catch (error) {
         toast.error(
             error instanceof ImportError
                 ? error.message
-                : "Не удалось импортировать файл",
+                : "Unable to import file(",
         )
     } finally {
         importing.value = false
@@ -97,7 +103,7 @@ async function onDeleteAll() {
 
     try {
         await deleteAllEntries()
-        toast.success("Все данные удалены")
+        toast.success("All data was deleted")
     } finally {
         deleting.value = false
     }
@@ -107,42 +113,58 @@ async function onDeleteAll() {
 <template>
     <div class="space-y-6 pb-8">
 
-        <!-- Profile -->
-
         <Card class="p-4">
             <div class="flex items-center gap-4">
 
-                <img v-if="profile?.photoUrl" :src="profile.photoUrl" alt="Avatar"
-                    class="size-16 rounded-full object-cover">
+                <template v-if="profile">
+                    <img v-if="profile.photoUrl" :src="profile.photoUrl" alt="Avatar"
+                        class="size-16 rounded-full object-cover">
 
-                <div v-else
-                    class="flex size-16 items-center justify-center rounded-full bg-accent text-xl font-semibold">
-                    {{ (profile?.displayName ?? "?")[0].toUpperCase() }}
+                    <div v-else
+                        class="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary text-xl font-semibold">
+                        {{ (profile.displayName ?? "T")[0].toUpperCase() }}
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <h2 class="truncate font-heading text-lg font-semibold">
+                            {{ profile.displayName }}
+                        </h2>
+
+                        <p v-if="profile.username" class="text-sm text-muted-foreground truncate">
+                            @{{ profile.username }}
+                        </p>
+                    </div>
+                </template>
+
+                <template v-else>
+                    <div class="flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <User weight="Bold" class="size-8" />
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <h2 class="truncate font-heading text-lg font-semibold">
+                            Local profile
+                        </h2>
+
+                        <p class="text-sm text-muted-foreground truncate">
+                            All data was saved on this device
+                        </p>
+                    </div>
+                </template>
+
+                <div class="flex flex-col items-end gap-1">
+                    <Badge variant="secondary" class="font-mono font-medium px-2.5 py-0.5">
+                        {{ totalEntries }}
+                    </Badge>
                 </div>
-
-                <div class="min-w-0 flex-1">
-                    <h2 class="truncate font-heading text-lg font-semibold">
-                        {{ profile?.displayName ?? "Гость" }}
-                    </h2>
-
-                    <p class="text-sm text-muted-foreground">
-                        @{{ profile?.username ?? "username" }}
-                    </p>
-                </div>
-
-                <Badge variant="secondary">
-                    {{ totalEntries }}
-                </Badge>
 
             </div>
         </Card>
 
-        <!-- Data -->
-
         <div class="space-y-2">
 
             <h3 class="px-2 text-sm font-medium text-muted-foreground">
-                Данные
+                Data
             </h3>
 
             <Card class="py-0">
@@ -151,8 +173,8 @@ async function onDeleteAll() {
                     <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
                         @click="onExport">
                         <div class="flex items-center gap-3">
-                            <Download class="size-5 text-primary" />
-                            <span>Экспортировать данные</span>
+                            <Download class="size-5" />
+                            <span>Export notes</span>
                         </div>
 
                         <Spinner v-if="exporting" class="size-4 animate-spin" />
@@ -163,8 +185,8 @@ async function onDeleteAll() {
                     <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
                         @click="onImportClick">
                         <div class="flex items-center gap-3">
-                            <Upload class="size-5 text-primary" />
-                            <span>Импортировать данные</span>
+                            <Upload class="size-5" />
+                            <span>Import notes</span>
                         </div>
 
                         <Spinner v-if="importing" class="size-4 animate-spin" />
@@ -177,38 +199,46 @@ async function onDeleteAll() {
 
             <input ref="importInput" type="file" accept="application/json" class="hidden" @change="onFileSelected">
         </div>
-
-        <!-- Appearance -->
-
         <div class="space-y-2">
 
             <h3 class="px-2 text-sm font-medium text-muted-foreground">
-                Внешний вид
+                Appearence
             </h3>
 
             <Card class="py-0">
+                <div class="divide-y">
+                    <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
+                        @click="theme.toggle()">
+                        <div class="flex items-center gap-3">
 
-                <button class="flex w-full items-center justify-between p-4 transition-colors hover:bg-accent/50"
-                    @click="theme.toggle()">
-                    <div class="flex items-center gap-3">
+                            <Sun v-if="theme.mode === 'light'" class="size-5" />
 
-                        <Sun v-if="theme.mode === 'light'" class="size-5" />
+                            <Moon v-else class="size-5" />
 
-                        <Moon v-else class="size-5" />
+                            <span>Interface theme</span>
 
-                        <span>Тема оформления</span>
+                        </div>
 
-                    </div>
+                        <span class="text-sm text-muted-foreground">
+                            {{
+                                theme.mode === "light"
+                                    ? "Light"
+                                    : "Dark"
+                            }}
+                        </span>
+                    </button>
 
-                    <span class="text-sm text-muted-foreground">
-                        {{
-                            theme.mode === "light"
-                                ? "Светлая"
-                                : "Тёмная"
-                        }}
-                    </span>
-                </button>
-
+                    <EditDialog>
+                        <button
+                            class="flex w-full items-center justify-between transition-colors p-4 hover:bg-accent/50">
+                            <div class="flex items-center gap-3">
+                                <Settings class="size-5" weight="Outline" />
+                                <span>Editor</span>
+                            </div>
+                            <AltArrowRight class="size-5 text-muted-foreground" />
+                        </button>
+                    </EditDialog>
+                </div>
             </Card>
         </div>
 
@@ -217,7 +247,7 @@ async function onDeleteAll() {
         <div class="space-y-2">
 
             <h3 class="px-2 text-sm font-medium text-destructive">
-                Опасная зона
+                Danger zone
             </h3>
 
             <Card class="border-destructive/20 py-0">
@@ -229,7 +259,7 @@ async function onDeleteAll() {
                         <button
                             class="flex w-full items-center gap-3 p-4 text-destructive transition-colors hover:bg-destructive/5">
                             <TrashBinMinimalistic class="size-5" />
-                            <span>Удалить все данные</span>
+                            <span>Delete all notes</span>
                         </button>
 
                     </AlertDialogTrigger>
@@ -238,25 +268,25 @@ async function onDeleteAll() {
 
                         <AlertDialogHeader>
                             <AlertDialogTitle>
-                                Удалить все данные?
+                                You're shure?
                             </AlertDialogTitle>
 
                             <AlertDialogDescription>
-                                Все записи будут удалены без возможности восстановления.
+                                All records will be deleted without the possibility of recovery.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
 
                         <AlertDialogFooter>
 
                             <AlertDialogCancel :disabled="deleting">
-                                Отмена
+                                Close
                             </AlertDialogCancel>
 
                             <AlertDialogAction :disabled="deleting" @click="onDeleteAll">
                                 <Spinner v-if="deleting" class="size-4 animate-spin" />
 
                                 <span v-else>
-                                    Удалить
+                                    Delete
                                 </span>
                             </AlertDialogAction>
 
@@ -267,8 +297,17 @@ async function onDeleteAll() {
                 </AlertDialog>
 
             </Card>
-
         </div>
 
     </div>
+    <p class="text-xs text-muted-foreground font-mono text-center w-full">
+        Web app v{{ appVersion }}
+    </p>
+
 </template>
+
+<style>
+[data-active="true"] {
+    background: var(--accent);
+}
+</style>

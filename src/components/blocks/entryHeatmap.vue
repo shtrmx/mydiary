@@ -27,19 +27,13 @@ function intensity(count: number): number {
     return 3
 }
 
-// Помощник для правильного склонения
 function getDeclension(number: number): string {
-    const n = Math.abs(number) % 100
-    const n1 = n % 10
-    if (n > 10 && n < 20) return "записей"
-    if (n1 > 1 && n1 < 5) return "записи"
-    if (n1 === 1) return "запись"
-    return "записей"
+    if (number == 1) return "note"
+    return "notes"
 }
 
-// Форматирование даты для тултипа
 function formatTooltipDate(date: Date): string {
-    return date.toLocaleDateString("ru-RU", {
+    return date.toLocaleDateString("en-US", {
         day: "numeric",
         month: "long",
         year: "numeric"
@@ -74,8 +68,8 @@ function updateVisiblePeriod() {
     const startDate = startWeek[0].date
     const endDate = endWeek[endWeek.length - 1].date
 
-    const startStr = startDate.toLocaleDateString("ru-RU", { month: "short", year: "numeric" }).replace('.', '')
-    const endStr = endDate.toLocaleDateString("ru-RU", { month: "short", year: "numeric" }).replace('.', '')
+    const startStr = startDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }).replace('.', '')
+    const endStr = endDate.toLocaleDateString("en-US", { month: "short", year: "numeric" }).replace('.', '')
 
     periodLabel.value = startStr === endStr ? startStr : `${startStr} — ${endStr}`
 }
@@ -137,14 +131,14 @@ function handleDayClick(day: HeatmapDay) {
                     {{ total }}
                 </span>
                 <span class="text-sm text-muted-foreground">
-                    записей всего
+                    notes totaly
                 </span>
             </div>
 
             <span class="flex items-center gap-1 text-sm font-medium text-orange-500">
                 <Fire weight="Bold" class="size-4" />
                 {{ streak }}
-                {{ streak === 1 ? "день" : "дней" }}
+                {{ streak === 1 ? "day" : "days" }}
             </span>
         </div>
 

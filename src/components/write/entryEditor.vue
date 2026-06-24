@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, inject, type Ref, nextTick } from "vue"
+import { ref, watch, inject, type Ref, nextTick, computed } from "vue"
 import { useEditor, EditorContent } from "@tiptap/vue-3"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -8,7 +8,8 @@ import Link from "@tiptap/extension-link"
 import {
     TextBold, TextItalic, TextCross, LinkMinimalistic,
     ListCheck, ListArrowDown, ChatRoundLine, Code,
-    UndoLeftRound, UndoRightRound, AltArrowDown, Eraser
+    UndoLeftRound, UndoRightRound, AltArrowDown, Eraser,
+    Settings
 } from "@solar-icons/vue"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +25,21 @@ import {
     DialogDescription
 } from "@/components/ui/dialog"
 import type { EditorState } from "@/types/editor"
+import type { Selection } from "@tiptap/pm/state"
+import { useEditorSettingsStore } from "@/utils/stores/editor"
+import EditDialog from "../blocks/editDialog.vue"
 
+const settingsStore = useEditorSettingsStore()
+
+const dynamicEditorStyles = computed(() => ({
+    "--editor-font-family": settingsStore.fontFamilyName,
+    "--editor-font-size": `${settingsStore.fontSize}px`,
+    "--editor-line-height": `${settingsStore.lineHeight}`,
+    "--editor-content-width": `${settingsStore.contentWidth}%`,
+    "--editor-first-line-indent": `${settingsStore.paragraphSpacing}px`,
+    "--editor-letter-spacing": `${settingsStore.letterSpacing}px`,
+    "--editor-paragraph-block": `${settingsStore.paragraphBlock}px`
+}))
 const headerHeight = inject<Ref<number>>(
     "headerHeight",
     ref(0)
@@ -35,11 +50,12 @@ const props = withDefaults(
         modelValue: string
         placeholder?: string
     }>(),
-    { placeholder: "Что произошло сегодня?" }
+    { placeholder: "What's new today?" }
 )
 
 const emit = defineEmits<{ "update:modelValue": [value: string] }>()
 const editorState = inject<Ref<EditorState>>("editorState", ref("closed"))
+const savedSelection = ref<Selection | null>(null)
 
 const activeHeading = ref<string | null>("Normal")
 const linkDialogOpen = ref(false)
@@ -67,6 +83,8 @@ const editor = useEditor({
     ],
     editorProps: {
         attributes: { class: "prose-entry focus:outline-none" },
+        scrollMargin: { top: 16, bottom: 120, left: 0, right: 0 },
+        scrollThreshold: { top: 16, bottom: 65, left: 0, right: 0 },
     },
     onUpdate: ({ editor }) => {
         emit("update:modelValue", editor.getHTML())
@@ -91,16 +109,34 @@ watch(editorState, async (state) => {
     }
 }, { flush: "post" })
 
-function setHeading(level: number | null) {
+
+async function setHeading(level: number | null) {
     if (!editor.value) return
-    if (!level) {
-        editor.value.chain().focus().setParagraph().run()
-    } else {
-        editor.value.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 }).run()
+
+    const chain = editor.value.chain()
+
+    if (savedSelection.value) {
+        chain.setTextSelection(savedSelection.value)
     }
+
+    chain.focus()
+
+    if (level === null) {
+        chain.setParagraph()
+    } else {
+        chain.toggleHeading({
+            level: level as 1 | 2 | 3 | 4,
+        })
+    }
+
+    chain.run()
+
+    await nextTick()
+
+    editor.value.commands.focus()
+
     syncActiveMarks()
 }
-
 
 function openLinkDialog() {
     if (!editor.value) return
@@ -137,6 +173,13 @@ function clearFormatting() {
     syncActiveMarks()
 }
 
+
+
+function saveSelection() {
+    if (!editor.value) return
+    savedSelection.value = editor.value.state.selection
+}
+
 watch(
     () => props.modelValue,
     (value) => {
@@ -144,6 +187,25 @@ watch(
         editor.value?.commands.setContent(value, { emitUpdate: false })
     }
 )
+
+function restoreEditorFocus() {
+    const instance = editor.value
+
+    if (!instance) return
+
+    requestAnimationFrame(() => {
+        const chain = instance.chain()
+
+        if (savedSelection.value) {
+            chain.setTextSelection(savedSelection.value)
+        }
+
+        chain.focus()
+        chain.run()
+
+        instance.view.dom.focus()
+    })
+}
 
 defineExpose({ editor })
 </script>
@@ -153,49 +215,54 @@ defineExpose({ editor })
         editorState !== 'closed'
             ? 'fixed left-0 right-0 bottom-0 z-40 bg-background'
             : 'h-full cursor-text'
-    ]" :style="editorState !== 'closed'
-        ? {
-            top: `calc(${headerHeight}px + var(--tg-safe-area-inset-top, 0px) + 1rem)`
-        }
-        : undefined
-        " @click="editorState === 'closed' && (editorState = 'open')">
-        <EditorContent :editor="editor" class="flex-1 overflow-y-auto px-4 pb-24 text-sm leading-relaxed" @click.stop />
+    ]" :style="[
+        dynamicEditorStyles,
+        editorState !== 'closed'
+            ? {
+                top: 'var(--tg-safe-area-inset-top, 0px)',
+            }
+            : {}
+    ]" @click="editorState === 'closed' && (editorState = 'open')">
+        <EditorContent :editor="editor" class="flex-1 overflow-y-auto px-4 pb-32 scroll-pb-32 text-sm leading-relaxed"
+            @click.stop :style="{
+                paddingTop: `${headerHeight + 16}px`
+            }" />
     </div>
 
     <Teleport to="#dock-toolbar-slot" v-if="editor && editorState === 'focused'">
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost" aria-label="Отменить"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0" variant="ghost" aria-label="Отменить"
             :disabled="!editor.can().undo()" @click="editor.chain().focus().undo().run()">
-            <UndoLeftRound weight="Bold" class="size-4" />
+            <UndoLeftRound weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost" aria-label="Повторить"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0" variant="ghost" aria-label="Повторить"
             :disabled="!editor.can().redo()" @click="editor.chain().focus().redo().run()">
-            <UndoRightRound weight="Bold" class="size-4" />
+            <UndoRightRound weight="Bold" class="size-5" />
         </Button>
 
         <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
 
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('bold') ? 'secondary' : 'ghost'" aria-label="Жирный"
             @click="editor.chain().focus().toggleBold().run()">
-            <TextBold weight="Bold" class="size-4" />
+            <TextBold weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('italic') ? 'secondary' : 'ghost'" aria-label="Курсив"
             @click="editor.chain().focus().toggleItalic().run()">
-            <TextItalic weight="Bold" class="size-4" />
+            <TextItalic weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('strike') ? 'secondary' : 'ghost'" aria-label="Зачеркнутый"
             @click="editor.chain().focus().toggleStrike().run()">
-            <TextCross weight="Bold" class="size-4" />
+            <TextCross weight="Bold" class="size-5" />
         </Button>
 
         <Dialog v-model:open="linkDialogOpen">
             <DialogTrigger as-child>
-                <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+                <Button type="button" size="icon-lg" class="rounded-md shrink-0"
                     :variant="editor.isActive('link') ? 'secondary' : 'ghost'" aria-label="Ссылка"
-                    @click="openLinkDialog">
-                    <LinkMinimalistic weight="Bold" class="size-4" />
+                    @click="openLinkDialog" @pointerdown="saveSelection">
+                    <LinkMinimalistic weight="Bold" class="size-5" />
                 </Button>
             </DialogTrigger>
             <DialogContent class="sm:max-w-sm">
@@ -230,7 +297,7 @@ defineExpose({ editor })
                     <AltArrowDown weight="Bold" class="size-3" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" class="w-32">
+            <DropdownMenuContent align="start" class="w-32" @close-auto-focus.prevent="restoreEditorFocus">
                 <DropdownMenuItem @click="setHeading(null)" :class="{ 'bg-secondary': activeHeading === 'Normal' }">
                     Normal
                 </DropdownMenuItem>
@@ -243,90 +310,109 @@ defineExpose({ editor })
 
         <Button type="button" size="icon-sm" class="rounded-md shrink-0" variant="ghost"
             aria-label="Очистить форматирование" @click="clearFormatting">
-            <Eraser weight="Bold" class="size-4" />
+            <Eraser weight="Bold" class="size-5" />
         </Button>
 
 
         <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
 
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('bulletList') ? 'secondary' : 'ghost'" aria-label="Маркированный список"
             @click="editor.chain().focus().toggleBulletList().run()">
-            <ListCheck weight="Bold" class="size-4" />
+            <ListCheck weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('orderedList') ? 'secondary' : 'ghost'" aria-label="Нумерованный список"
             @click="editor.chain().focus().toggleOrderedList().run()">
-            <ListArrowDown weight="Bold" class="size-4" />
+            <ListArrowDown weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('blockquote') ? 'secondary' : 'ghost'" aria-label="Цитата"
             @click="editor.chain().focus().toggleBlockquote().run()">
-            <ChatRoundLine weight="Bold" class="size-4" />
+            <ChatRoundLine weight="Bold" class="size-5" />
         </Button>
-        <Button type="button" size="icon-sm" class="rounded-md shrink-0"
+        <Button type="button" size="icon-lg" class="rounded-md shrink-0"
             :variant="editor.isActive('code') ? 'secondary' : 'ghost'" aria-label="Код"
             @click="editor.chain().focus().toggleCode().run()">
-            <Code weight="Bold" class="size-4" />
+            <Code weight="Bold" class="size-5" />
         </Button>
+
+        <div class="w-px h-6 bg-border mx-1 shrink-0"></div>
+
+        <EditDialog>
+            <Button type="button" size="icon-lg" class="rounded-md shrink-0"
+                :variant="editor.isActive('code') ? 'secondary' : 'ghost'" aria-label="Настройки">
+                <Settings weight="Bold" class="size-5" />
+            </Button>
+        </EditDialog>
 
     </Teleport>
 </template>
 
 <style>
+.prose-entry {
+    font-family: var(--editor-font-family);
+    font-size: var(--editor-font-size);
+    line-height: var(--editor-line-height);
+    letter-spacing: var(--editor-letter-spacing);
+
+    width: var(--editor-content-width);
+    max-width: 100%;
+    margin-inline: auto;
+}
+
 .prose-entry p {
-    line-height: 1.7;
-    margin-block: 0.4em;
+    position: relative;
+    /* Контекст для абсолютного плейсхолдера */
+    line-height: var(--editor-line-height);
+    /* text-indent теперь ВСЕГДА активен, чтобы курсор не прыгал при вводе */
+    text-indent: var(--editor-first-line-indent);
+    margin-block: var(--editor-paragraph-block);
+}
+
+/* Предотвращаем схлопывание высоты пустых параграфов (убирает прыжки отступов сверху) */
+.prose-entry p:empty::after {
+    content: "\200B";
+    /* Zero-width space */
+    display: inline-block;
+    height: 0;
 }
 
 .prose-entry p:first-child {
     margin-top: 0;
 }
 
-.prose-entry h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    line-height: 1.25;
-    margin-block: 0.6em 0.3em;
+.prose-entry h1:first-child,
+.prose-entry h2:first-child,
+.prose-entry h3:first-child,
+.prose-entry h4:first-child {
+    margin-top: 0;
 }
 
-.prose-entry h1:first-child {
-    margin-top: 0;
+.prose-entry h1,
+.prose-entry h2,
+.prose-entry h3,
+.prose-entry h4 {
+    font-weight: 700;
+    line-height: 1.25;
+    margin-top: 0.3em;
+    margin-bottom: 0.1em;
+}
+
+.prose-entry h1 {
+    font-size: 2.25em;
 }
 
 .prose-entry h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
-    margin-block: 0.6em 0.3em;
-}
-
-.prose-entry h2:first-child {
-    margin-top: 0;
+    font-size: 1.75em;
 }
 
 .prose-entry h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    line-height: 1.35;
-    margin-block: 0.5em 0.25em;
-}
-
-.prose-entry h3:first-child {
-    margin-top: 0;
+    font-size: 1.35em;
 }
 
 .prose-entry h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.4;
-    margin-block: 0.4em 0.2em;
-}
-
-.prose-entry h4:first-child {
-    margin-top: 0;
+    font-size: 1.15em;
 }
 
 .prose-entry ul {
@@ -346,13 +432,17 @@ defineExpose({ editor })
 }
 
 .prose-entry li>p {
-    margin: 0;
+    text-indent: 0 !important;
+}
+
+.prose-entry blockquote p {
+    text-indent: 0;
 }
 
 .prose-entry blockquote {
-    border-left: 3px solid var(--border);
-    padding-inline-start: 0.9rem;
-    margin-block: 0.5em;
+    border-left: 4px solid var(--border);
+    padding-inline-start: 1rem;
+    margin-block: 1em;
     color: var(--muted-foreground);
     font-style: italic;
 }
@@ -360,10 +450,9 @@ defineExpose({ editor })
 .prose-entry code {
     background-color: var(--muted);
     border-radius: 0.25rem;
-    padding: 0.15em 0.4em;
+    padding: 0.2em 0.4em;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.85em;
-    font-weight: 600;
 }
 
 .prose-entry pre {
@@ -396,12 +485,24 @@ defineExpose({ editor })
     font-style: italic;
 }
 
-.prose-entry p.is-editor-empty:first-child::before {
+.prose-entry p.is-empty::before,
+.prose-entry p.is-editor-empty:first-child::before,
+.prose-entry.is-editor-empty p:first-child::before {
     content: attr(data-placeholder);
     color: var(--muted-foreground);
-    float: left;
+    position: absolute;
+    top: 0;
+    left: var(--editor-first-line-indent);
     pointer-events: none;
+    white-space: nowrap;
     height: 0;
+    line-height: inherit;
+    float: none !important;
+}
+
+.prose-entry li>p.is-empty::before,
+.prose-entry blockquote p.is-empty::before {
+    left: 0 !important;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

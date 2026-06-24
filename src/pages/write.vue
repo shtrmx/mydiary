@@ -28,10 +28,10 @@ async function doPublish() {
     saving.value = true
     try {
         await createEntry(content.value)
-        toast.success("Запись опубликована")
+        toast.success("Note saved")
         router.push("/home")
     } catch (e) {
-        toast.error("Ошибка при публикации")
+        toast.error("Save error")
     } finally {
         saving.value = false
     }

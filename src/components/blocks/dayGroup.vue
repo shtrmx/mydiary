@@ -16,10 +16,10 @@ const label = computed(() => {
     const isSameDay = (a: Date, b: Date) =>
         a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 
-    if (isSameDay(date, today)) return "Сегодня"
-    if (isSameDay(date, yesterday)) return "Вчера"
+    if (isSameDay(date, today)) return "Today"
+    if (isSameDay(date, yesterday)) return "Tommorow"
 
-    return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })
+    return date.toLocaleDateString("en-US", { day: "numeric", month: "long" })
 })
 </script>
 

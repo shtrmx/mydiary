@@ -6,6 +6,18 @@ import { computed, inject, type Ref, ref } from "vue"
 import { Button } from "@/components/ui/button"
 import type { EditorState } from "@/types/editor"
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 const route = useRoute()
 const isWriting = computed(() => route.path.startsWith("/add"))
 const isEntryRoute = computed(() => route.path.startsWith("/add/entry"))
@@ -25,12 +37,10 @@ const items = [
 </script>
 
 <template>
-    <div class="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2" :style="{
-        bottom: 'calc(var(--tg-content-safe-area-inset-bottom, 0px) + 24px)'
-    }">
+    <div class="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-2"
+        :class="[showToolbar ? 'bottom-2' : 'bottom-[calc(var(--tg-content-safe-area-inset-bottom,0px)+24px)]']">
         <nav class="flex items-center gap-2 rounded-full border border-border bg-card/70 p-1 shadow-lg backdrop-blur-xl transition-all duration-300"
-            :class="showToolbar ? 'h-12 max-w-[calc(100vw-7rem)]' : 'h-16'">
-
+            :class="[showToolbar ? 'h-13 max-w-[calc(100vw-7rem)]' : 'h-16']">
             <RouterLink v-for="item in items" :key="item.to" :to="item.to" v-slot="{ href, navigate, isExactActive }"
                 custom>
                 <a v-show="!showToolbar" :href="href" @click="navigate" class="relative z-10 flex h-full">
@@ -57,26 +67,47 @@ const items = [
                 class="flex h-full items-center gap-1.5 overflow-x-auto px-1 scrollbar-hide"></div>
         </nav>
 
-        <!-- Кнопки действий -->
         <Motion v-if="isWriting && editorState === 'open'" :initial="{ opacity: 0, scale: 0.7 }"
             :animate="{ opacity: 1, scale: 1 }" :transition="{ type: 'spring', stiffness: 300, damping: 22 }"
             class="flex gap-2">
-
-            <Button v-if="isEntryRoute" type="button" size="icon" variant="outline"
-                class="size-12 rounded-full shadow-lg" aria-label="Удалить запись" @click="remove()">
-                <TrashBinMinimalistic weight="Bold" class="size-5 text-destructive" />
-            </Button>
-
-            <Button type="button" size="icon" class="size-12 rounded-full shadow-lg" :disabled="!canPublish"
-                aria-label="Сохранить" @click="publish()">
+            <Button type="button" size="icon" class="size-12 rounded-full shadow-lg backdrop-blur-lg"
+                :disabled="!canPublish" aria-label="Сохранить" @click="publish()">
                 <CheckCircle weight="Bold" class="size-7" />
             </Button>
+
+            <AlertDialog v-if="isEntryRoute">
+                <AlertDialogTrigger as-child>
+                    <Button size="icon" variant="default"
+                        class="size-12 rounded-full shadow-lg bg-card/70 backdrop-blur-lg hover:bg-card/90"
+                        aria-label="Удалить запись">
+                        <TrashBinMinimalistic weight="Bold" class="size-5 text-destructive" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent class="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>You're sure to delete this note?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is irreversible. The recording will be permanently deleted from the app's
+                            memory.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter class="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+                        <AlertDialogCancel class="rounded-xl mt-0">Close</AlertDialogCancel>
+                        <AlertDialogAction
+                            class="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                            @click="remove()">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Motion>
 
         <Motion v-else-if="showToolbar" :initial="{ opacity: 0, scale: 0.7 }" :animate="{ opacity: 1, scale: 1 }"
             :transition="{ type: 'spring', stiffness: 300, damping: 22 }">
-            <Button type="button" size="icon" variant="outline" class="size-10 my-auto rounded-full shadow-lg"
-                aria-label="Закрыть редактор" @click="editorState = 'open'">
+            <Button type="button" size="icon" variant="default"
+                class="size-10 my-auto rounded-full shadow-lg bg-card/70 backdrop-blur-lg hover:bg-card/90"
+                aria-label="Close editor" @click="editorState = 'open'">
                 <CloseCircle weight="Bold" class="size-6 text-destructive" />
             </Button>
         </Motion>

@@ -18,6 +18,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Documents } from "@solar-icons/vue"
 
 const route = useRoute()
 const router = useRouter()
@@ -62,15 +63,14 @@ watchEffect(() => {
     canPublish.value = !isEmpty(content.value)
 })
 
-// Логика сохранения (переопределяем функцию из родителя через provide)
 async function doSave() {
     if (!entry.value || isEmpty(content.value) || saving.value) return
     saving.value = true
     try {
         await updateEntry(entry.value.id, content.value)
-        toast.success("Изменения сохранены")
+        toast.success("Changes saved")
     } catch {
-        toast.error("Ошибка при сохранении")
+        toast.error("Save error")
     } finally {
         saving.value = false
     }
@@ -85,10 +85,10 @@ async function doDelete() {
     saving.value = true
     try {
         await deleteEntry(entry.value.id)
-        toast.success("Запись удалена")
+        toast.success("Note deleted")
         router.push("/home")
     } catch {
-        toast.error("Ошибка при удалении")
+        toast.error("Delete error")
     } finally {
         saving.value = false
     }
@@ -103,42 +103,32 @@ onBeforeUnmount(() => {
 
 <template>
     <div v-if="entry" class="flex flex-1 flex-col gap-4" :class="editorState === 'closed' ? 'pb-4' : 'pb-0'">
-
-        <!-- Сам редактор -->
         <EntryEditor v-model="content" />
     </div>
 
     <Empty v-else-if="notFound">
         <EmptyHeader>
             <EmptyMedia variant="icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                    <path d="M10 9H8" />
-                    <path d="M16 13H8" />
-                    <path d="M16 17H8" />
-                </svg>
+                <Documents weight="Outline" />
             </EmptyMedia>
-            <EmptyTitle>Запись не найдена</EmptyTitle>
-            <EmptyDescription>Возможно, она уже была удалена.</EmptyDescription>
+            <EmptyTitle>Note wasn't founded</EmptyTitle>
+            <EmptyDescription>It may have already been removed.</EmptyDescription>
         </EmptyHeader>
     </Empty>
 
-    <!-- Диалог удаления (всегда рендерится внутри блока entry или ниже) -->
     <AlertDialog v-model:open="showDeleteDialog">
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Удалить запись?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Это действие нельзя отменить. Запись будет удалена без возможности восстановления.
+                    This action cannot be undone. The entry will be permanently deleted.
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
             <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
                 <AlertDialogAction @click="doDelete" :disabled="saving">
-                    {{ saving ? 'Удаление...' : 'Удалить' }}
+                    {{ saving ? 'Deleting...' : 'Delete' }}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

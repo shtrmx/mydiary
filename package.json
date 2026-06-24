@@ -1,7 +1,7 @@
 {
   "name": "snipla",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.2.1",
-    "@hugeicons/vue": "^1.0.6",
+    "@hugeicons/vue": "^1.0.7",
     "@lucide/vue": "^1.21.0",
     "@solar-icons/vue": "^1.2.1",
     "@tailwindcss/typography": "^0.5.20",
@@ -24,6 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.4.4",
+    "fuse.js": "^7.4.2",
     "motion-v": "^2.3.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
@@ -44,6 +45,8 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^5.7.2",
     "vite": "^8.0.16",
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-vue-devtools": "^8.1.3",
     "vue-tsc": "^2.2.0"
   },
   "allowScripts": {

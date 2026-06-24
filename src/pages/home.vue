@@ -18,7 +18,6 @@ const sentinel = ref<HTMLElement | null>(null)
 const root = ref<HTMLElement | null>(null)
 const heatmapWrapper = ref<HTMLElement | null>(null)
 
-// Используем новые поля из хука
 const { hidden: heatmapHidden, isScrolled, scrollToTop } = useScrollDirection(root)
 const { height: heatmapHeight } = useElementSize(heatmapWrapper)
 
@@ -45,7 +44,6 @@ async function scrollToDay(dayKey: string) {
     }
 
     if (el) {
-        // Заменили block: "start" на block: "center"
         el.scrollIntoView({ behavior: "smooth", block: "center" })
 
         el.classList.add("ring-2", "ring-primary/50", "ring-offset-4", "ring-offset-background", "rounded-xl", "transition-all", "duration-500")
@@ -78,11 +76,11 @@ async function scrollToDay(dayKey: string) {
                     <Documents weight="Outline" color="primary" />
                 </EmptyMedia>
                 <EmptyTitle>
-                    Записей пока нет
+                    There are no notes yet
                 </EmptyTitle>
 
                 <EmptyDescription>
-                    Создайте первую запись, чтобы начать вести дневник
+                    Create your first entry to start your diary
                 </EmptyDescription>
             </EmptyHeader>
         </Empty>

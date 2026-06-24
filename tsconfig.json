@@ -3,6 +3,7 @@
     "target": "ES2022",
     "jsx": "preserve",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite-plugin-pwa/vue"],
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "bundler",

@@ -22,22 +22,22 @@ const routes: RouteRecordRaw[] = [
             {
                 path: "home",
                 component: Home,
-                meta: { title: "Дневник" },
+                meta: { title: "Diary" },
             },
             {
                 path: "add",
                 component: Write,
-                meta: { title: "Новая запись" },
+                meta: { title: "New note" },
             },
             {
                 path: "add/entry/:id",
                 component: Entry,
-                meta: { title: "Запись" },
+                meta: { title: "Note" },
             },
             {
                 path: "settings",
                 component: Settings,
-                meta: { title: "Настройки" },
+                meta: { title: "Settings" },
             },
         ],
     },

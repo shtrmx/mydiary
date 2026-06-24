@@ -33,11 +33,6 @@ import {
                     Go home
                 </Button>
             </RouterLink>
-
-            <EmptyDescription class=" text-muted">
-                Need help?
-                <RouterLink to="/help">Contact support</RouterLink>.
-            </EmptyDescription>
         </EmptyContent>
     </Empty>
 </template>

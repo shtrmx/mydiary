@@ -1,4 +1,3 @@
-// src/utils/hooks/useScrollDirection.ts
 import { onMounted, onUnmounted, ref, type Ref } from "vue"
 
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -15,28 +14,37 @@ function findScrollParent(el: HTMLElement | null): HTMLElement | null {
 
 export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
     const hidden = ref(false)
-    const isScrolled = ref(false) // Новый флаг для кнопки "Наверх"
+    const isScrolled = ref(false)
     let scrollEl: HTMLElement | null = null
     let lastScrollTop = 0
+    let ticking = false
 
-    const THRESHOLD_PX = 8
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+    const THRESHOLD_PX = isMobile ? 24 : 8
 
-    function onScroll() {
+    function update() {
         if (!scrollEl) return
 
-        const current = scrollEl.scrollTop
+        const current = Math.max(0, scrollEl.scrollTop)
         const delta = current - lastScrollTop
 
-        // Если проскроллили больше 400px — показываем кнопку "Наверх"
         isScrolled.value = current > 400
 
-        if (current <= 0) {
+        if (current <= 10) {
             hidden.value = false
         } else if (Math.abs(delta) > THRESHOLD_PX) {
             hidden.value = delta > 0
         }
 
         lastScrollTop = current
+        ticking = false
+    }
+
+    function onScroll() {
+        if (!ticking) {
+            requestAnimationFrame(update)
+            ticking = true
+        }
     }
 
     function scrollToTop() {
@@ -45,7 +53,10 @@ export function useScrollDirection(anchorRef: Ref<HTMLElement | null>) {
 
     onMounted(() => {
         scrollEl = findScrollParent(anchorRef.value)
-        scrollEl?.addEventListener("scroll", onScroll, { passive: true })
+        if (scrollEl) {
+            lastScrollTop = Math.max(0, scrollEl.scrollTop)
+            scrollEl.addEventListener("scroll", onScroll, { passive: true })
+        }
     })
 
     onUnmounted(() => {
