@@ -79,7 +79,12 @@ const editor = useEditor({
             openOnClick: false,
             HTMLAttributes: { class: "text-primary underline cursor-pointer" },
         }),
-        Placeholder.configure({ placeholder: props.placeholder }),
+        Placeholder.configure({
+            placeholder: props.placeholder,
+            emptyEditorClass: "is-editor-empty",
+            emptyNodeClass: "is-empty",
+            showOnlyCurrent: false,
+        })
     ],
     editorProps: {
         attributes: { class: "prose-entry focus:outline-none" },
@@ -485,19 +490,12 @@ defineExpose({ editor })
     font-style: italic;
 }
 
-.prose-entry p.is-empty::before,
-.prose-entry p.is-editor-empty:first-child::before,
-.prose-entry.is-editor-empty p:first-child::before {
+.prose-entry p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     color: var(--muted-foreground);
-    position: absolute;
-    top: 0;
-    left: var(--editor-first-line-indent);
+    float: left;
     pointer-events: none;
-    white-space: nowrap;
     height: 0;
-    line-height: inherit;
-    float: none !important;
 }
 
 .prose-entry li>p.is-empty::before,
