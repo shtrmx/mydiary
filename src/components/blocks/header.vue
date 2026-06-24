@@ -28,7 +28,7 @@ function goBack() {
 
 <template>
     <div class="fixed right-0 left-0 z-60 flex px-4 justi"
-        :class="[isTelegramEnvironment() ? 'justify-between' : 'justify-center']"
+        :class="[isTelegramEnvironment() ? 'justify-center' : 'justify-between']"
         :style="{ top: 'calc(var(--tg-content-safe-area-inset-top, 0px) + 7px)' }">
 
         <div class="flex items-center gap-1">
