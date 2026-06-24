@@ -69,7 +69,7 @@ const fonts: FontOption[] = [
 
         <DialogContent class="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Настройки редактора</DialogTitle>
+                <DialogTitle>Editor settings</DialogTitle>
             </DialogHeader>
 
             <div class="space-y-6 py-4">
@@ -78,7 +78,7 @@ const fonts: FontOption[] = [
                     <DropdownMenuTrigger as-child>
                         <button
                             class="flex w-full items-center justify-between p-2 rounded-md border hover:bg-accent/40">
-                            <span class="text-sm">Шрифт</span>
+                            <span class="text-sm">Font</span>
                             <span class="text-sm text-muted-foreground">
                                 {{ fontFamilyName }}
                             </span>
@@ -101,7 +101,7 @@ const fonts: FontOption[] = [
 
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Размер текста</span>
+                        <span>Font size</span>
                         <span>{{ fontSize }}px</span>
                     </div>
 
@@ -110,7 +110,7 @@ const fonts: FontOption[] = [
 
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Интервал</span>
+                        <span>Line height</span>
                         <span>{{ lineHeight }}</span>
                     </div>
 
@@ -119,7 +119,7 @@ const fonts: FontOption[] = [
 
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Ширина текста</span>
+                        <span>Content width</span>
                         <span>{{ contentWidth }}%</span>
                     </div>
 
@@ -128,7 +128,7 @@ const fonts: FontOption[] = [
 
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Отступ параграфа</span>
+                        <span>First line indent</span>
                         <span>{{ paragraphSpacing }}px</span>
                     </div>
 
@@ -137,7 +137,7 @@ const fonts: FontOption[] = [
 
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Межбуквенный интервал</span>
+                        <span>Letter spacing</span>
                         <span>{{ letterSpacing }}px</span>
                     </div>
 
@@ -145,7 +145,7 @@ const fonts: FontOption[] = [
                 </div>
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm text-muted-foreground">
-                        <span>Межабзацный интервал</span>
+                        <span>Paragraph spacing</span>
                         <span>{{ paragraphBlock }}px</span>
                     </div>
 
@@ -157,7 +157,7 @@ const fonts: FontOption[] = [
 
             <DialogFooter>
                 <Button variant="outline" as-child>
-                    <DialogTrigger>Закрыть</DialogTrigger>
+                    <DialogTrigger>Close</DialogTrigger>
                 </Button>
             </DialogFooter>
         </DialogContent>

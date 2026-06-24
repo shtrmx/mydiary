@@ -1,14 +1,28 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from "vue"
-import { Fire } from "@solar-icons/vue"
+import { Fire, Magnifier } from "@solar-icons/vue"
 import { useEntryHeatmap } from "@/utils/hooks/useEntryHeatmap"
 import type { HeatmapDay } from "@/utils/hooks/useEntryHeatmap"
+import { useMagicKeys, whenever } from '@vueuse/core'
+import { db } from "@/lib/db/schema"
+import Fuse from "fuse.js"
+import type { DiaryEntry } from "@/lib/db/schema"
+import {
+    Command,
+    CommandDialog,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
 
 import {
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { router } from "@/utils/router"
 
 const emit = defineEmits<{
     "day-click": [dayKey: string]
@@ -121,19 +135,101 @@ function handleDayClick(day: HeatmapDay) {
         emit('day-click', day.dayKey)
     }
 }
+
+// --- Search Logic ---
+const isSearchOpen = ref(false)
+const searchQuery = ref("")
+const allEntries = ref<DiaryEntry[]>([])
+const fuse = ref<Fuse<DiaryEntry> | null>(null)
+
+const { meta_k, ctrl_k } = useMagicKeys()
+
+whenever(meta_k!, () => {
+    isSearchOpen.value = true
+})
+whenever(ctrl_k!, () => {
+    isSearchOpen.value = true
+})
+
+async function initSearch() {
+    if (allEntries.value.length === 0) {
+        allEntries.value = await db.entries.toArray()
+        fuse.value = new Fuse(allEntries.value, {
+            keys: ["plainText"],
+            threshold: 0.4,
+            includeMatches: true,
+            ignoreLocation: true,
+        })
+    }
+}
+
+watch(isSearchOpen, async (open) => {
+    if (open) {
+        await initSearch()
+    } else {
+        searchQuery.value = ""
+    }
+})
+
+const searchResults = computed(() => {
+    if (!searchQuery.value.trim() || !fuse.value) {
+        return [...allEntries.value].sort((a, b) => b.createdAt - a.createdAt).slice(0, 20)
+    }
+    return fuse.value.search(searchQuery.value).map(r => r.item).slice(0, 20)
+})
+
+function goToEntry(id: number) {
+    isSearchOpen.value = false
+    router.push(`/add/entry/${id}`)
+}
+
+function formatDate(timestamp: number): string {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    })
+}
 </script>
 
 <template>
     <div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 backdrop-blur-lg p-4">
-        <div class="flex items-baseline justify-between">
-            <div class="flex items-baseline gap-2">
+        <div class="flex justify-between items-center">
+            <div class="flex items-baseline gap-1">
                 <span class="font-heading text-2xl font-semibold tabular-nums">
                     {{ total }}
                 </span>
                 <span class="text-sm text-muted-foreground">
-                    notes totaly
+                    notes
                 </span>
             </div>
+
+            <Motion as="button" layout :initial="{ opacity: 0, scale: 0.8, x: -10 }"
+                :animate="{ opacity: 1, scale: 1, x: 0 }" :whileHover="{ scale: 1.05 }" :whileTap="{ scale: 0.95 }"
+                class="inline-flex h-8 gap-2 items-center justify-center overflow-hidden rounded-full border border-border/50 bg-card/45 shadow-sm backdrop-blur-xl hover:bg-card/90 transition-colors duration-200 cursor-pointer"
+                @click="isSearchOpen = true">
+                <Magnifier weight="Outline" class="size-4 text-foreground ml-2" />
+                <p class="text-sm tracking-tight whitespace-nowrap mr-2">Search</p>
+            </Motion>
+            <CommandDialog v-model:open="isSearchOpen">
+                <Command :filter="() => 1">
+                    <CommandInput v-model="searchQuery" placeholder="Search notes..." />
+                    <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup class="gap-0">
+                            <CommandItem v-for="entry in searchResults" :key="entry.id" :value="String(entry.id)"
+                                @select="goToEntry(entry.id)" class="flex flex-col items-start gap-1">
+                                <span class="text-xs text-muted-foreground">
+                                    {{ formatDate(entry.createdAt) }}
+                                </span>
+                                <span class="text-sm line-clamp-2 text-foreground">
+                                    {{ entry.plainText || "Empty note" }}
+                                </span>
+                            </CommandItem>
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </CommandDialog>
 
             <span class="flex items-center gap-1 text-sm font-medium text-orange-500">
                 <Fire weight="Bold" class="size-4" />
