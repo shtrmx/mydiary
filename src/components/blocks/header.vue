@@ -23,17 +23,18 @@ const title = usePageTitle()
 const router = useRouter()
 
 const canGoBack = computed(() => {
-    return !!history.state?.back
+    return !!history.state?.back || window.history.length > 1
 })
 
 function goBack() {
-    if (history.state?.back) {
+    if (!!history.state?.back) {
         router.back()
+    } else if (window.history.length > 1) {
+        window.history.back()
     } else {
         router.push("/")
     }
 }
-
 // --- Search Logic ---
 const isSearchOpen = ref(false)
 const searchQuery = ref("")
@@ -96,21 +97,21 @@ function formatDate(timestamp: number): string {
 
         <div class="flex items-center gap-1">
             <div v-show="!isTelegramEnvironment()" v-if="canGoBack"
-                class="m-1 inline-flex h-8 items-center gap-2 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-5 px-2 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer"
+                class="m-1 inline-flex h-7 items-center gap-1 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-2 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer"
                 @click="goBack">
                 <ArrowLeft weight="Outline" class="size-4 ml-2" />
-                <p class="text-sm font-medium tracking-tight whitespace-nowrap">Back</p>
+                <p class="text-xs tracking-tight whitespace-nowrap">Back</p>
             </div>
             <div v-show="!isTelegramEnvironment()" v-else
-                class="m-1 inline-flex h-8 items-center gap-2 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-5 px-2 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer">
+                class="m-1 inline-flex h-7 items-center gap-1 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-2 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer">
                 <Compass weight="Outline" class="size-4 ml-2" />
-                <p class="text-sm font-medium tracking-tight whitespace-nowrap">Home</p>
+                <p class="text-xs tracking-tight whitespace-nowrap">Home</p>
             </div>
 
             <Motion v-show="!isTelegramEnvironment()" as="button" layout :initial="{ opacity: 0, scale: 0.8, x: -10 }"
                 :animate="{ opacity: 1, scale: 1, x: 0 }" :whileHover="{ scale: 1.05 }" :whileTap="{ scale: 0.95 }"
                 class="m-1 inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border/50 bg-card/45 shadow-sm backdrop-blur-xl hover:bg-card/90 transition-colors duration-200 cursor-pointer"
-                @click="isSearchOpen = true">
+                :clas="{ 'pl-10': isTelegramEnvironment() }" @click="isSearchOpen = true">
                 <Magnifier weight="Outline" class="size-4 text-foreground" />
             </Motion>
         </div>
@@ -129,10 +130,9 @@ function formatDate(timestamp: number): string {
         </Motion>
 
         <div v-show="!isTelegramEnvironment()"
-            class="m-1 inline-flex h-8 items-center gap-2 overflow-hidden rounded-full border border-border/50 bg-card/45 pr-5 pl-2 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer"
+            class="m-1 inline-flex h-7 w-8 items-center gap-2 overflow-hidden rounded-full border border-border/50 bg-card/45 shadow-sm backdrop-blur-xl justify-center hover:bg-card/90 transition-all duration-200 cursor-pointer"
             @click="$router.push('/settings')">
-            <Settings weight="Outline" class="size-4 ml-2"></Settings>
-            <p class="text-sm font-medium tracking-tight whitespace-nowrap">Settings</p>
+            <Settings weight="Outline" class="size-4"></Settings>
         </div>
 
         <CommandDialog v-model:open="isSearchOpen">
